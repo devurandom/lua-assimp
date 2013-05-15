@@ -1,8 +1,13 @@
+ifneq ($(USE_LUAJIT),)
+LUA_CPPFLAGS=-I/usr/include/luajit-2.0
+LUA_LIBS=-lluajit-2.0
+else
 ifeq ($(LUA_VERSION),)
 LUA_VERSION=5.2
 endif
-
 LUA_CPPFLAGS=-I/usr/include/lua$(LUA_VERSION)
+LUA_LIBS=-llua$(LUA_VERSION)
+endif
 
 ifeq ($(LIBASSIMP),)
 ASSIMP_CPPFLAGS=-Iassimp/include
@@ -15,8 +20,7 @@ EXTRA_CFLAGS+= -g -O0
 endif
 
 CFLAGS=-Wall -Werror -pedantic -std=c99 -fPIC $(EXTRA_CFLAGS) $(LUA_CPPFLAGS) $(ASSIMP_CPPFLAGS)
-LDFLAGS=-Wl,--no-undefined
-LIBS=-llua$(LUA_VERSION) $(ASSIMP_LDFLAGS) -lassimp
+LIBS=$(LUA_LIBS) $(ASSIMP_LDFLAGS) -lassimp
 
 .PHONY: all
 all: assimp.so
