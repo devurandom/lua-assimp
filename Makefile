@@ -30,7 +30,7 @@ assimp.so: assimp.o lextlib/lextlib.o $(LUA_ASSIMP_DEPENDS)
 assimp.o: assimp.c lextlib/lextlib.h lextlib/lextlib_global.h lextlib/lextlib_lua52.h
 
 lextlib/lextlib.o:
-	$(MAKE) $(MAKEFLAGS) -C lextlib
+	$(MAKE) -C lextlib
 
 assimp/build:
 	mkdir assimp/build
