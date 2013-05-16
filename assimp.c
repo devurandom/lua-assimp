@@ -117,6 +117,16 @@ static int _make_mesh(lua_State *L, struct aiMesh *mesh) {
 
 	lua_setfield(L, l_mesh, "vertices");                // [-1,+0,e]
 
+	lua_createtable(L, mesh->mNumVertices, 0);          // [-0,+1,e]
+	int l_normals = lua_gettop(L);
+
+	for (int i = 0; i < mesh->mNumVertices; i++) {
+		_make_vector3d(L, &mesh->mNormals[i]);            // [-0,+1,e]
+		lua_rawseti(L, l_normals, i+1);                   // [-1,+0,e]
+	}
+
+	lua_setfield(L, l_mesh, "normals");                 // [-1,+0,e]
+
 	assert(lua_gettop(L) == l_mesh);
 	return 1;
 }
