@@ -5,8 +5,8 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "lextlib/lextlib.h"
-#include "lextlib/lextlib_lua52.h"
+#include <lextlib.h>
+#include <lextlib_lua52.h>
 
 
 static const char *_vector3d_map_index(int index) {
