@@ -13,6 +13,57 @@
 #define ASSIMP_UPVALUE_COLOR4D (lua_upvalueindex(2))
 
 
+#define AI_V3 sane_vector3f
+#define AI_M4X4 sane_matrix44f
+
+
+static inline float sane_vector3f(struct aiVector3D *v, int i) {
+	assert(i >= 0 && i < 3);
+	switch (i) {
+		case 0: return v->x;
+		case 1: return v->y;
+		case 2: return v->z;
+	}
+	return 0.0f;
+}
+
+static inline float sane_matrix44f(struct aiMatrix4x4 *m, int i, int j) {
+	assert(i >= 0 && i < 4);
+	assert(j >= 0 && j < 4);
+	switch (i) {
+		case 0:
+			switch (j) {
+				case 0: return m->a1;
+				case 1: return m->a2;
+				case 2: return m->a3;
+				case 3: return m->a4;
+			}
+		case 1:
+			switch (j) {
+				case 0: return m->b1;
+				case 1: return m->b2;
+				case 2: return m->b3;
+				case 3: return m->b4;
+			}
+		case 2:
+			switch (j) {
+				case 0: return m->c1;
+				case 1: return m->c2;
+				case 2: return m->c3;
+				case 3: return m->c4;
+			}
+		case 3:
+			switch (j) {
+				case 0: return m->d1;
+				case 1: return m->d2;
+				case 2: return m->d3;
+				case 3: return m->d4;
+			}
+	}
+	return 0.0f;
+}
+
+
 static const char *_vector3d__index_map[] = {"x", "y", "z", NULL};
 
 static int _vector3d__index(lua_State *L) {
@@ -72,12 +123,10 @@ static int _make_vector3d(lua_State *L, struct aiVector3D *vector) {
 	lua_createtable(L, 3, 0);                          // [-0,+1,e]
 	int l_vector = lua_gettop(L);
 
-	lua_pushnumber(L, vector->x);                      // [-0,+1,-]
-	lua_rawseti(L, l_vector, 1);                       // [-1,+0,e]
-	lua_pushnumber(L, vector->y);                      // [-0,+1,-]
-	lua_rawseti(L, l_vector, 2);                       // [-1,+0,e]
-	lua_pushnumber(L, vector->z);                      // [-0,+1,-]
-	lua_rawseti(L, l_vector, 3);                       // [-1,+0,e]
+	for (int i = 0; i < 3; i++) {
+		lua_pushnumber(L, AI_V3(vector, i));             // [-0,+1,-]
+		lua_rawseti(L, l_vector, i+1);                   // [-1,+0,e]
+	}
 
 	lua_pushvalue(L, ASSIMP_UPVALUE_VECTOR3D);
 	lua_setmetatable(L, l_vector);
@@ -113,41 +162,12 @@ static int _make_matrix44f(lua_State *L, struct aiMatrix4x4 *matrix) {
 	lua_createtable(L, 4*4, 0);                         // [-0,+1,e]
 	int l_matrix = lua_gettop(L);
 
-	lua_pushnumber(L, matrix->a1);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 0*4+1);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->a2);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 0*4+2);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->a3);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 0*4+3);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->a4);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 0*4+4);                    // [-1,+0,e]
-
-	lua_pushnumber(L, matrix->b1);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 1*4+1);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->b2);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 1*4+2);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->b3);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 1*4+3);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->b4);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 1*4+4);                    // [-1,+0,e]
-
-	lua_pushnumber(L, matrix->c1);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 2*4+1);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->c2);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 2*4+2);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->c3);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 2*4+3);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->c4);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 2*4+4);                    // [-1,+0,e]
-
-	lua_pushnumber(L, matrix->d1);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 3*4+1);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->d2);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 3*4+2);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->d3);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 3*4+3);                    // [-1,+0,e]
-	lua_pushnumber(L, matrix->d4);                      // [-0,+1,-]
-	lua_rawseti(L, l_matrix, 3*4+4);                    // [-1,+0,e]
+	for (int i = 0; i < 4; i++) {
+		for (int j = 0; j < 4; j++) {
+			lua_pushnumber(L, AI_M4X4(matrix, i, j));       // [-0,+1,-]
+			lua_rawseti(L, l_matrix, i*4+j+1);              // [-1,+0,e]
+		}
+	}
 
 	assert(lua_gettop(L) == l_matrix);
 	return 1;
