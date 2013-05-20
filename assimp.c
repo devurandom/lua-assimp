@@ -109,6 +109,91 @@ static int _make_color4d(lua_State *L, struct aiColor4D *color) {
 }
 
 /* [-0,+1,e] */
+static int _make_matrix44f(lua_State *L, struct aiMatrix4x4 *matrix) {
+	lua_createtable(L, 4*4, 0);                         // [-0,+1,e]
+	int l_matrix = lua_gettop(L);
+
+	lua_pushnumber(L, matrix->a1);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 0*4+1);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->a2);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 0*4+2);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->a3);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 0*4+3);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->a4);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 0*4+4);                    // [-1,+0,e]
+
+	lua_pushnumber(L, matrix->b1);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 1*4+1);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->b2);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 1*4+2);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->b3);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 1*4+3);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->b4);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 1*4+4);                    // [-1,+0,e]
+
+	lua_pushnumber(L, matrix->c1);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 2*4+1);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->c2);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 2*4+2);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->c3);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 2*4+3);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->c4);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 2*4+4);                    // [-1,+0,e]
+
+	lua_pushnumber(L, matrix->d1);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 3*4+1);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->d2);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 3*4+2);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->d3);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 3*4+3);                    // [-1,+0,e]
+	lua_pushnumber(L, matrix->d4);                      // [-0,+1,-]
+	lua_rawseti(L, l_matrix, 3*4+4);                    // [-1,+0,e]
+
+	assert(lua_gettop(L) == l_matrix);
+	return 1;
+}
+
+/* [-0,+1,e] */
+static int _make_vertex_weight(lua_State *L, struct aiVertexWeight *weight) {
+	lua_newtable(L);                                    // [-0,+1,e]
+	int l_weight = lua_gettop(L);
+
+	lua_pushinteger(L, weight->mVertexId+1);            // [-0,+1,-]
+	lua_setfield(L, l_weight, "vertex_index");          // [-1,+0,e]
+
+	lua_pushnumber(L, weight->mWeight);                 // [-0,+1,-]
+	lua_setfield(L, l_weight, "weight");                // [-1,+0,e]
+
+	assert(lua_gettop(L) == l_weight);
+	return 1;
+}
+
+/* [-0,+1,e] */
+static int _make_bone(lua_State *L, struct aiBone *bone) {
+	lua_newtable(L);                                    // [-0,+1,e]
+	int l_bone = lua_gettop(L);
+
+	lua_pushlstring(L, bone->mName.data, bone->mName.length);// [-0,+1,-]
+	lua_setfield(L, l_bone, "name");                    // [-1,+0,e]
+
+	_make_matrix44f(L, &bone->mOffsetMatrix);           // [-0,+1,e]
+	lua_setfield(L, l_bone, "offset_matrix");           // [-1,+0,e]
+
+	lua_createtable(L, bone->mNumWeights, 0);           // [-0,+1,e]
+	int l_weights = lua_gettop(L);
+
+	for (int i = 0; i < bone->mNumWeights; i++) {
+		_make_vertex_weight(L, &bone->mWeights[i]);       // [-0,+1,-]
+		lua_rawseti(L, l_weights, i+1);                   // [-1,+0,e]
+	}
+
+	lua_setfield(L, l_bone, "weights");                 // [-1,+0,e]
+
+	assert(lua_gettop(L) == l_bone);
+	return 1;
+}
+
+/* [-0,+1,e] */
 static int _make_face(lua_State *L, struct aiFace *face) {
 	lua_newtable(L);                                    // [-0,+1,e]
 	int l_face = lua_gettop(L);
@@ -180,6 +265,18 @@ static int _make_mesh(lua_State *L, struct aiMesh *mesh) {
 		}
 
 		lua_setfield(L, l_mesh, "faces");                 // [-1,+0,e]
+	}
+
+	if (mesh->mBones != NULL) {
+		lua_createtable(L, mesh->mNumBones, 0);           // [-0,+1,e]
+		int l_bones = lua_gettop(L);
+
+		for (int i = 0; i < mesh->mNumBones; i++) {
+			_make_bone(L, mesh->mBones[i]);                 // [-0,+1,e]
+			lua_rawseti(L, l_bones, i+1);                   // [-1,+0,e]
+		}
+
+		lua_setfield(L, l_mesh, "bones");                 // [-1,+0,e]
 	}
 
 	if (mesh->mVertices != NULL) {
