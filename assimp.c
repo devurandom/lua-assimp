@@ -1,3 +1,6 @@
+#include <stdlib.h>
+
+#include <assimp/cexport.h>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -429,8 +432,121 @@ static int assimp_import_file(lua_State *L) {
 }
 
 
+/* [-0,+0,e] */
+static struct aiFace _convert_face(lua_State *L, int l_face) {
+	struct aiFace face = {0};
+
+	lua_getfield(L, l_face, "indices");
+	int l_indices = lua_gettop(L);
+
+	int num_indices = lua_rawlen(L, l_indices);
+	face.mNumIndices = num_indices;
+	face.mIndices = malloc(sizeof(*face.mIndices) * num_indices);
+
+	for (int i = 1; i <= num_indices; i++) {
+		lua_rawgeti(L, l_indices, i);
+		face.mIndices[i-1] = luaX_checkinteger(L, -1, "index") - 1;
+	}
+
+	return face;
+}
+
+
+/* [-0,+0,e] */
+static struct aiVector3D _convert_vector3d(lua_State *L, int l_vector) {
+	struct aiVector3D vector = {0};
+
+	lua_rawgeti(L, l_vector, 1);
+	vector.x = luaX_checknumber(L, -1, "x");
+	lua_rawgeti(L, l_vector, 2);
+	vector.y = luaX_checknumber(L, -1, "y");
+	lua_rawgeti(L, l_vector, 3);
+	vector.z = luaX_checknumber(L, -1, "z");
+
+	return vector;
+}
+
+
+/* [-0,+0,e] */
+static struct aiMesh *_convert_mesh(lua_State *L, int l_mesh) {
+	struct aiMesh *mesh = malloc(sizeof(*mesh));
+	memset(mesh, 0, sizeof(*mesh));
+
+	lua_getfield(L, l_mesh, "faces");
+	int l_faces = lua_gettop(L);
+
+	int num_faces = lua_rawlen(L, l_faces);
+	mesh->mNumFaces = num_faces;
+	mesh->mFaces = malloc(sizeof(*mesh->mFaces) * num_faces);
+
+	for (int i = 1; i <= num_faces; i++) {
+		lua_rawgeti(L, l_faces, i);
+		mesh->mFaces[i-1] = _convert_face(L, lua_gettop(L));
+	}
+
+	lua_getfield(L, l_mesh, "vertices");
+	int l_vertices = lua_gettop(L);
+
+	int num_vertices = lua_rawlen(L, l_vertices);
+	mesh->mNumVertices = num_vertices;
+	mesh->mVertices = malloc(sizeof(*mesh->mVertices) * num_vertices);
+
+	for (int i = 1; i <= num_vertices; i++) {
+		lua_rawgeti(L, l_vertices, i);
+		mesh->mVertices[i-1] = _convert_vector3d(L, lua_gettop(L));
+	}
+
+	return mesh;
+}
+
+
+/* [-0,+0,e] */
+static struct aiScene *_convert_scene(lua_State *L, int l_scene) {
+	struct aiScene *scene = malloc(sizeof(*scene));
+	memset(scene, 0, sizeof(*scene));
+
+	lua_getfield(L, l_scene, "meshes");
+	int l_meshes = lua_gettop(L);
+
+	int num_meshes = lua_rawlen(L, l_meshes);
+	scene->mNumMeshes = num_meshes;
+	scene->mMeshes = malloc(sizeof(*scene->mMeshes) * num_meshes);
+
+	for (int i = 1; i <= num_meshes; i++) {
+		lua_rawgeti(L, l_meshes, i);
+		scene->mMeshes[i-1] = _convert_mesh(L, lua_gettop(L));
+	}
+
+	return scene;
+}
+
+
+static int assimp_export_scene(lua_State *L) {
+	luaX_checktype(L, 1, "scene", LUA_TTABLE);
+	const char *format = luaX_checkstring(L, 2, "format");
+	const char *filename = luaX_checkstring(L, 3, "filename");
+
+	struct aiScene *scene = _convert_scene(L, 1);
+
+	if (aiExportScene(scene, format, filename, 0)) {
+		aiReleaseImport(scene);
+		lua_pushboolean(L, true);                          // [-0,+1,-]
+	}
+	else {
+		aiReleaseImport(scene);
+		lua_pushboolean(L, false);                         // [-0,+1,-]
+		lua_pushstring(L, aiGetErrorString());             // [-0,+1,e]
+
+		return 2;
+	}
+
+	return 1;
+}
+
+
 struct luaL_Reg assimp_lib[] = {
 	LUAX_FUNCTION(assimp_, import_file),
+	LUAX_FUNCTION(assimp_, export_scene),
 
 	{ NULL, NULL }
 };
